@@ -1,0 +1,20 @@
+#Gene abundance boxplot
+library(readxl)
+library(tidyverse)
+library(ggplot2)
+
+gene_data <- read_excel("D:/1st chapter/Molecular study/qPCR/Gene number2.xlsx")
+
+gene_data_long <- gene_data %>%
+  pivot_longer(cols = starts_with("mcrA"):ends_with("Water"),
+               names_to = c(".value", "Environment"),
+               names_sep = ":") %>%
+  mutate(Environment = factor(Environment, levels = c("AnS", "AeS", "Water")))
+
+ggplot(gene_data_long, aes(x = Environment, y = value, fill = Gene)) +
+  geom_boxplot() +
+  facet_wrap(~ Gene, scales = "free_y") +
+  labs(x = "Environment", y = "Gene Abundance", fill = "Gene") +
+  theme_minimal()
+
+

@@ -1,0 +1,63 @@
+# load necessary packages
+library(caTools)
+library(randomForest)
+library(ggplot2)
+library(dplyr)
+
+# Load the data
+data_path <- "C:\\Users\\User\\Downloads\\pca.csv"
+data <- read.csv(data_path)
+
+
+# Function to train a Random Forest model and display important parameters with customization
+train_and_plot_importance <- function(data, target_variable) {
+  # Splitting data into train and test datasets
+  set.seed(123)  # Setting seed for reproducibility
+  split <- sample.split(data[[target_variable]], SplitRatio = 0.7)
+  
+  train <- subset(data, split == TRUE)
+  test <- subset(data, split == FALSE)
+  
+  # Fitting Random Forest to the train dataset
+  set.seed(120)  # Setting seed for reproducibility
+  classifier_RF <- randomForest(x = train[, !(names(train) %in% target_variable)], 
+                                y = train[[target_variable]], 
+                                ntree = 500)
+  
+  # Display the Random Forest model
+  print(classifier_RF)
+  
+  # Predicting the Test set results
+  y_pred <- predict(classifier_RF, newdata = test[, !(names(test) %in% target_variable)])
+  
+  # Evaluate the model
+  # Since the target variable is numeric, use MSE (Mean Squared Error) for evaluation
+  mse <- mean((test[[target_variable]] - y_pred)^2)
+  cat("Mean Squared Error (MSE) for", target_variable, ":", mse, "\n")
+  
+  # Get importance
+  importance_df <- as.data.frame(importance(classifier_RF))
+  importance_df$Variable <- rownames(importance_df)
+  
+  # Plot importance with customization
+  ggplot(importance_df, aes(x = reorder(Variable, IncNodePurity), y = IncNodePurity)) +
+    geom_bar(stat = "identity", fill = "steelblue", color = "black", size = 1.5) +
+    coord_flip() +
+    theme_minimal() +
+    theme(
+      axis.text.y = element_text(size = 10, face = "bold"),
+      axis.title.x = element_text(size = 12, face = "bold"),
+      axis.title.y = element_text(size = 12, face = "bold"),
+      panel.border = element_rect(color = "black", fill = NA, size = 1.5)
+    ) +
+    labs(
+      title = paste("Variable Importance for", target_variable),
+      x = "Variables",
+      y = "Importance (IncNodePurity)"
+    )
+}
+
+# Train models and show important parameters for CO2, CH4, and N2O
+train_and_plot_importance(data, "CO2")
+train_and_plot_importance(data, "CH4")
+train_and_plot_importance(data, "N2O")

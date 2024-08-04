@@ -1,0 +1,106 @@
+#Illumina FASTQ files were given as tar files (File name: X204SC24012338-Z01-F001.tar)
+
+#Copying file
+cp /home/ad/EcoPrawn/Bashar/Bashar_16S/X204SC24012338-Z01-F001.tar /home/szk/16s/
+
+#Extracting tar file:
+tar -xvf X204SC24012338-Z01-F001.tar
+
+#Importing data as artifact:
+qiime tools import \
+--type 'SampleData[PairedEndSequencesWithQuality]' \
+--input-path /home/szk/16s/bacteria \
+--input-format CasavaOneEightSingleLanePerSampleDirFmt \
+--output-path sequence.qza
+
+#Upload metadata manually
+
+#inspect metadata
+qiime tools inspect-metadata metadata.tsv
+
+#Check quality plot
+qiime demux summarize \
+--i-data sequence.qza \
+--o-visualization sequence.qzv
+
+
+#trimming amplicon primers
+qiime cutadapt trim-paired \
+--i-demultiplexed-sequences sequence.qza \
+--p-cores 16 \
+--p-front-f CCTAYGGGRBGCASCAG \
+--p-front-r GGACTACNNGGGTATCTAAT  \
+--o-trimmed-sequences trimmed_sequence.qza \
+--verbose \
+&> primer_trimming.log 
+
+
+#Denoising with DADA2 (Archaea)
+qiime dada2 denoise-paired \
+  --p-n-threads 10 \
+  --i-demultiplexed-seqs trimmed_sequence.qza \
+  --p-trim-left-f 0 \
+  --p-trim-left-r 0 \
+  --p-trunc-len-f 210 \
+  --p-trunc-len-r 190 \
+  --o-table table.qza \
+  --o-representative-sequences rep-seqs.qza \
+  --o-denoising-stats denoising-stats.qza
+
+#visualization
+qiime feature-table summarize \
+  --i-table table.qza \
+  --o-visualization table.qzv \
+  --m-sample-metadata-file metadata.tsv
+
+qiime feature-table tabulate-seqs \
+  --i-data rep-seqs.qza \
+  --o-visualization rep-seqs.qzv
+
+qiime metadata tabulate \
+  --m-input-file denoising-stats.qza \
+  --o-visualization denoising-stats.qzv
+
+
+#Generate a tree for phylogenetic diversity analyses
+qiime phylogeny align-to-tree-mafft-fasttree \
+  --i-sequences rep-seqs.qza \
+  --o-alignment aligned-rep-seqs.qza \
+  --o-masked-alignment masked-aligned-rep-seqs.qza \
+  --o-tree unrooted-tree.qza \
+  --o-rooted-tree rooted-tree.qza
+
+#Alpha rarefaction plotting
+qiime diversity alpha-rarefaction \
+  --i-table table.qza \
+  --i-phylogeny rooted-tree.qza \
+  --p-max-depth 4000 \
+  --m-metadata-file sample-metadata.tsv \
+  --o-visualization alpha-rarefaction.qzv
+
+
+#Taxonomic Analysis
+qiime feature-classifier classify-sklearn \
+  --i-classifier gg-13-8-99-515-806-nb-classifier.qza \
+  --i-reads rep-seqs.qza \
+  --o-classification taxonomy.qza
+
+qiime metadata tabulate \
+  --m-input-file taxonomy.qza \
+  --o-visualization taxonomy.qzv
+
+qiime taxa barplot \
+  --i-table table.qza \
+  --i-taxonomy taxonomy.qza \
+  --m-metadata-file metadata.tsv \
+  --o-visualization taxa-bar-plots.qzv
+
+
+#phylogentic tree mapping
+qiime tools export \
+  --input-path rooted-tree.qza \
+  --output-path export_rooted_tree
+
+cd export_rooted_tree
+
+nwk2tre tree.nwk > tree.newick

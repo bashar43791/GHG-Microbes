@@ -1,0 +1,23 @@
+# Load necessary packages
+  library(factoextra)
+
+# Extract numeric columns (excluding the first column assumed as ID)
+data_numeric <- data[, sapply(data, is.numeric)]
+
+# Standardize the numeric data
+data_standardized <- scale(data_numeric)
+
+# Perform PCA
+pca_result <- prcomp(data_standardized, center = TRUE, scale. = TRUE)
+
+# Plot PCA biplot with factoextra
+fviz_pca_biplot(pca_result, 
+                geom.ind = "none",  # Do not plot individual points
+                col.ind = data$Zone,  # Color by Zone if needed
+                addEllipses = TRUE, 
+                ellipse.type = "confidence", 
+                ellipse.level = 0.95, 
+                repel = TRUE,
+                legend.title = "Principal Components",
+                label = "none"  # Do not label points
+)

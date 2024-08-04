@@ -1,0 +1,79 @@
+#Correlation scatterplot 
+library(ggplot2)
+
+data <- read.csv("D:/Bioinfo/16S data/Archeal 16s/Cor.csv")
+
+create_scatter_plot <- function(data, x_var, y_var) {
+  # Remove rows with missing or infinite values for the selected variables
+  clean_data <- data[is.finite(data[[x_var]]) & is.finite(data[[y_var]]), ]
+  
+  r <- round(cor(clean_data[[x_var]], clean_data[[y_var]]), 2)
+  p <- cor.test(clean_data[[x_var]], clean_data[[y_var]])$p.value
+  
+  ggplot(clean_data, aes_string(x = x_var, y = y_var)) + 
+    geom_point(color = "blue") + 
+    geom_smooth(method = "lm", color = "red", fill = "red", alpha = 0.2) + 
+    annotate("text", x = Inf, y = Inf, label = paste0("r = ", r), hjust = 1.1, vjust = 2, size = 4, color = "black") +
+    annotate("text", x = Inf, y = Inf, label = paste0("p = ", round(p, 3)), hjust = 1.1, vjust = 3.5, size = 4, color = "black") +
+    theme_classic() +
+    ggtitle(paste(x_var, "vs", y_var))
+}
+
+variables <- c("Sum_ASVs", "Chao1", "Pielou.evenness", "Shannon")
+
+for (var in variables) {
+  print(create_scatter_plot(data, "CO2", var))
+}
+
+for (var in variables) {
+  print(create_scatter_plot(data, "CH4", var))
+}
+
+for (var in variables) {
+  print(create_scatter_plot(data, "N2O", var))
+}
+
+
+
+#Correlation matrix 
+corrplot2 <- function(data,
+                      method = "pearson",
+                      sig.level = 0.05,
+                      order = "original",
+                      diag = FALSE,
+                      type = "upper",
+                      tl.srt = 90,
+                      number.font = 1,
+                      number.cex = 1,
+                      mar = c(0, 0, 0, 0)) {
+library(corrplot)
+  
+mat <- cor(data, method = method)
+  
+  col <- colorRampPalette(c("#BB4444", "#EE9988", "#FFFFFF", "#77AADD", "#4477AA"))
+  corrplot(mat,
+    method = "color", col = col(200),
+    mar = mar, 
+    type = type, order = order,
+    tl.col = "black", tl.srt = tl.srt, # rotation of text labels
+    diag = diag, # hide correlation coefficients on the diagonal
+    # Remove any argument related to displaying the coefficient values
+  )
+}
+
+library(readxl)
+library(dplyr)
+
+data_path_new <- "D:/1st chapter/Molecular study/qPCR/Gene-social.xlsx"
+dat_new <- read_excel(data_path_new)
+
+corrplot2(
+  data = dat_numeric_new,
+  method = "pearson",
+  sig.level = 0.05,
+  order = "original",
+  diag = FALSE,
+  type = "upper",
+  tl.srt = 75
+)
+
